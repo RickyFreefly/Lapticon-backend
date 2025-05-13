@@ -1,0 +1,40 @@
+const express = require('express');
+const router = express.Router();
+const Viaje = require('../models/Viaje');
+const User = require('../models/User');
+
+router.get('/disponibles', async (req, res) => {
+  try {
+    const { ciudadOrigen, ciudadDestino } = req.query;
+
+    if (!ciudadOrigen || !ciudadDestino) {
+      return res.status(400).json({ error: 'Faltan parámetros de búsqueda.' });
+    }
+
+    const viajes = await Viaje.find({
+      ciudadOrigen: { $regex: new RegExp(ciudadOrigen, 'i') },
+      ciudadDestino: { $regex: new RegExp(ciudadDestino, 'i') },
+      estado: 'disponible'
+    }).lean();
+
+    const viajesConNombre = await Promise.all(
+      viajes.map(async (viaje) => {
+        const usuario = await User.findOne({ uid: viaje.uid }).lean();
+        return {
+          ciudadOrigen: viaje.ciudadOrigen,
+          ciudadDestino: viaje.ciudadDestino,
+          fechaViaje: viaje.fechaViaje,
+          nombreUsuario: usuario?.nombre ?? 'Anónimo',
+          uid: viaje.uid,
+        };
+      })
+    );
+
+    res.json(viajesConNombre);
+  } catch (error) {
+    console.error('Error al buscar viajes disponibles:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+module.exports = router;

@@ -1,5 +1,3 @@
-// services/firebaseService.js
-
 const admin = require('firebase-admin');
 const serviceAccount = require('../firebase-adminsdk.json');
 
@@ -10,23 +8,23 @@ if (!admin.apps.length) {
   });
 }
 
-// Middleware para verificar el token JWT enviado desde el frontend
+// Middleware para verificar el token JWT
 const verificarToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).send('Token no proporcionado');
+    return res.status(401).json({ error: 'Token no proporcionado' });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(' ')[1]; // 'Bearer abc.def.ghi' => 'abc.def.ghi'
 
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    req.user = decoded;
+    req.usuario = decoded; // <-- usar siempre `req.usuario` en controladores
     next();
   } catch (error) {
     console.error('❌ Error al verificar el token:', error);
-    return res.status(403).send('Token inválido');
+    return res.status(403).json({ error: 'Token inválido' });
   }
 };
 

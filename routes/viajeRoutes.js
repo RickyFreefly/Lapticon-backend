@@ -1,42 +1,68 @@
-//Viajerouter
 const express = require('express');
-const router = express.Router(); // ✔️ Express Router, no 'router' externo
+const router = express.Router();
 const { crearViaje } = require('../controllers/viajeController');
 const { verificarToken } = require('../services/firebaseService');
-const Viaje = require('../models/Viaje'); // ✅ Importación necesaria
+const Viaje = require('../models/Viaje');
 
-// Registrar nuevo viaje
+// ✅ Registrar nuevo viaje
 router.post('/', verificarToken, crearViaje);
 
-// Listar viajes del usuario autenticado
+// ✅ Listar todos los viajes del usuario autenticado
 router.get('/', verificarToken, async (req, res) => {
   try {
-    const viajes = await Viaje.find({ uid: req.user.uid }).sort({ fechaViaje: 1 });
+    const viajes = await Viaje.find({ uid: req.usuario.uid }).sort({ fechaViaje: 1 });
     res.json(viajes);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener viajes' });
   }
 });
 
-// Buscar viajeros por país y ciudad (excluyendo al usuario actual)
+// ✅ Buscar viajeros por ciudad de origen (excluyendo al usuario actual)
 router.get('/buscar', verificarToken, async (req, res) => {
   try {
-    const { pais, ciudad } = req.query;
+    const { ciudad } = req.query;
 
-    if (!pais || !ciudad) {
-      return res.status(400).json({ error: 'Faltan parámetros de búsqueda' });
+    if (!ciudad) {
+      return res.status(400).json({ error: 'Falta el parámetro ciudad' });
     }
 
     const viajes = await Viaje.find({
-      paisOrigen: pais,
       ciudadOrigen: ciudad,
-      uid: { $ne: req.user.uid }
+      uid: { $ne: req.usuario.uid },
+      estado: 'disponible' // solo mostrar viajes disponibles
     }).sort({ fechaViaje: 1 });
 
     res.json(viajes);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error al buscar viajeros:', err);
     res.status(500).json({ error: 'Error al buscar viajeros' });
+  }
+});
+
+// ✅ Cambiar estado de un viaje específico (completado, cancelado, etc.)
+router.patch('/:id/estado', verificarToken, async (req, res) => {
+  try {
+    const { estado } = req.body;
+    const { id } = req.params;
+
+    if (!['disponible', 'completado', 'cancelado'].includes(estado)) {
+      return res.status(400).json({ error: 'Estado inválido' });
+    }
+
+    const viaje = await Viaje.findOneAndUpdate(
+      { _id: id, uid: req.usuario.uid },
+      { estado },
+      { new: true }
+    );
+
+    if (!viaje) {
+      return res.status(404).json({ error: 'Viaje no encontrado o no autorizado' });
+    }
+
+    res.json({ message: 'Estado actualizado', viaje });
+  } catch (err) {
+    console.error('❌ Error al actualizar estado del viaje:', err);
+    res.status(500).json({ error: 'Error al actualizar el estado' });
   }
 });
 

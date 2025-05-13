@@ -8,8 +8,9 @@ const encomiendaSchema = new mongoose.Schema({
   moneda: String,
   valor: Number,
   estado: { type: String, default: 'disponible' },
-  viajeroId: { type: String, default: null }, // <-- Nuevo campo
-  createdAt: { type: Date, default: Date.now }
+  viajeroId: { type: String, default: null },
+  fechaCreacion: { type: Date, default: Date.now },
+  fechaVencimiento: { type: Date } // <-- Añadido correctamente
 });
 
 module.exports = mongoose.model('Encomienda', encomiendaSchema);

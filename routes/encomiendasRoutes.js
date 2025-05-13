@@ -1,10 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const Encomienda = require('../models/Encomiendas');
-const verificarToken = require('../middlewares/VerificarToken'); // si ya tienes el middleware
-const User = require('../models/User'); 
+const verificarToken = require('../middlewares/VerificarToken');
+const User = require('../models/User');
 
-// Ruta para crear una encomienda
+// 🔁 Función para actualizar encomiendas vencidas
+async function actualizarEncomiendasVencidas() {
+  const hoy = new Date();
+  try {
+    await Encomienda.updateMany(
+      { estado: 'disponible', fechaVencimiento: { $lt: hoy } },
+      { $set: { estado: 'vencida' } }
+    );
+  } catch (error) {
+    console.error('❌ Error al actualizar encomiendas vencidas:', error);
+  }
+}
+
+// ✅ Ruta para crear una encomienda
 router.post('/', verificarToken, async (req, res) => {
   try {
     const {
@@ -15,13 +28,19 @@ router.post('/', verificarToken, async (req, res) => {
       valor
     } = req.body;
 
+    const fechaCreacion = new Date();
+    const fechaVencimiento = new Date(fechaCreacion);
+    fechaVencimiento.setMonth(fechaCreacion.getMonth() + 1);
+
     const nuevaEncomienda = new Encomienda({
-      uid: req.usuario.uid, // obtenido del token Firebase
+      uid: req.usuario.uid,
       ciudadOrigen,
       ciudadDestino,
       observaciones,
       moneda,
-      valor
+      valor,
+      fechaCreacion,
+      fechaVencimiento
     });
 
     const guardada = await nuevaEncomienda.save();
@@ -32,7 +51,7 @@ router.post('/', verificarToken, async (req, res) => {
   }
 });
 
-// Ruta para obtener encomiendas disponibles filtradas por origen y destino
+// ✅ Ruta para obtener encomiendas disponibles filtradas por origen y destino
 router.get('/disponibles', verificarToken, async (req, res) => {
   const { origen, destino } = req.query;
 
@@ -41,6 +60,8 @@ router.get('/disponibles', verificarToken, async (req, res) => {
   }
 
   try {
+    await actualizarEncomiendasVencidas();
+
     const encomiendas = await Encomienda.find({
       ciudadOrigen: origen,
       ciudadDestino: destino,
@@ -61,6 +82,8 @@ router.get('/disponibles', verificarToken, async (req, res) => {
         moneda: e.moneda,
         estado: e.estado,
         remitenteNombre: remitente?.nombre || 'Desconocido',
+        fechaCreacion: e.fechaCreacion,
+        fechaVencimiento: e.fechaVencimiento
       };
     });
 
@@ -71,10 +94,10 @@ router.get('/disponibles', verificarToken, async (req, res) => {
   }
 });
 
-// Ruta para que un viajero tome una encomienda
+// ✅ Ruta para que un viajero tome una encomienda
 router.put('/tomar/:id', verificarToken, async (req, res) => {
   const encomiendaId = req.params.id;
-  const uidViajero = req.usuario.uid; // Se obtiene desde el token
+  const uidViajero = req.usuario.uid;
 
   try {
     const encomienda = await Encomienda.findById(encomiendaId);
@@ -84,7 +107,7 @@ router.put('/tomar/:id', verificarToken, async (req, res) => {
     }
 
     if (encomienda.estado !== 'disponible') {
-      return res.status(400).json({ error: 'Esta encomienda ya fue tomada' });
+      return res.status(400).json({ error: 'Esta encomienda ya fue tomada o vencida' });
     }
 
     encomienda.estado = 'tomada';
@@ -99,7 +122,7 @@ router.put('/tomar/:id', verificarToken, async (req, res) => {
   }
 });
 
-// Ruta combinada: devuelve encomiendas disponibles y tomadas por el viajero
+// ✅ Ruta combinada: devuelve encomiendas disponibles y tomadas por el viajero
 router.get('/buscar', verificarToken, async (req, res) => {
   const { origen, destino } = req.query;
   const uidViajero = req.usuario.uid;
@@ -109,6 +132,8 @@ router.get('/buscar', verificarToken, async (req, res) => {
   }
 
   try {
+    await actualizarEncomiendasVencidas();
+
     const [disponibles, tomadas, remitentes] = await Promise.all([
       Encomienda.find({ ciudadOrigen: origen, ciudadDestino: destino, estado: 'disponible' }),
       Encomienda.find({ ciudadOrigen: origen, ciudadDestino: destino, estado: 'tomada', viajeroId: uidViajero }),
@@ -119,7 +144,9 @@ router.get('/buscar', verificarToken, async (req, res) => {
       const remitente = remitentes.find(u => u.uid === e.uid);
       return {
         ...e.toObject(),
-        remitenteNombre: remitente?.nombre || 'Desconocido'
+        remitenteNombre: remitente?.nombre || 'Desconocido',
+        fechaCreacion: e.fechaCreacion,
+        fechaVencimiento: e.fechaVencimiento
       };
     });
 
@@ -133,6 +160,60 @@ router.get('/buscar', verificarToken, async (req, res) => {
   }
 });
 
+// ✅ Ruta para ver todas las encomiendas vencidas
+router.get('/vencidas', verificarToken, async (req, res) => {
+  try {
+    const vencidas = await Encomienda.find({ estado: 'vencida' });
+    const remitenteUIDs = vencidas.map(e => e.uid);
+    const remitentes = await User.find({ uid: { $in: remitenteUIDs } });
 
+    const respuesta = vencidas.map(e => {
+      const remitente = remitentes.find(r => r.uid === e.uid);
+      return {
+        _id: e._id,
+        ciudadOrigen: e.ciudadOrigen,
+        ciudadDestino: e.ciudadDestino,
+        observaciones: e.observaciones,
+        valor: e.valor,
+        moneda: e.moneda,
+        estado: e.estado,
+        fechaCreacion: e.fechaCreacion,
+        fechaVencimiento: e.fechaVencimiento,
+        remitenteNombre: remitente?.nombre || 'Desconocido'
+      };
+    });
+
+    res.json(respuesta);
+  } catch (error) {
+    console.error('❌ Error al obtener encomiendas vencidas:', error);
+    res.status(500).json({ error: 'Error al obtener encomiendas vencidas' });
+  }
+});
+
+// ✅ Ruta para obtener TODAS las encomiendas del remitente autenticado
+router.get('/', verificarToken, async (req, res) => {
+  try {
+    await actualizarEncomiendasVencidas();
+
+    const uid = req.usuario.uid;
+
+    const encomiendas = await Encomienda.find({ uid }).sort({ fechaCreacion: -1 });
+
+    res.json(encomiendas); // devuelve la lista completa
+  } catch (error) {
+    console.error('❌ Error al obtener encomiendas del usuario:', error);
+    res.status(500).json({ error: 'Error al obtener encomiendas del usuario' });
+  }
+});
+
+router.post('/actualizar-vencidas', async (req, res) => {
+  try {
+    await actualizarEncomiendasVencidas();
+    res.json({ mensaje: 'Encomiendas vencidas actualizadas' });
+  } catch (error) {
+    console.error('❌ Error al actualizar vencidas:', error);
+    res.status(500).json({ error: 'Error en la tarea programada' });
+  }
+});
 
 module.exports = router;

@@ -1,4 +1,8 @@
+const express = require('express');
+const router = express.Router();
+const axios = require('axios');
 const ChatMensaje = require('../models/ChatMensaje');
+const { verificarToken } = require('../middlewares/VerificarToken');
 
 router.post('/', verificarToken, async (req, res) => {
   const { mensajeUsuario } = req.body;
@@ -9,7 +13,7 @@ router.post('/', verificarToken, async (req, res) => {
   }
 
   try {
-    // 🔹 Guardar mensaje del usuario en MongoDB
+    // 🔹 Guardar mensaje del usuario
     await ChatMensaje.create({
       uid,
       role: 'user',
@@ -38,7 +42,7 @@ router.post('/', verificarToken, async (req, res) => {
 
     const respuesta = response.data.choices[0].message.content.trim();
 
-    // 🔹 Guardar mensaje del bot en MongoDB
+    // 🔹 Guardar mensaje del bot
     await ChatMensaje.create({
       uid,
       role: 'bot',
@@ -54,3 +58,5 @@ router.post('/', verificarToken, async (req, res) => {
     });
   }
 });
+
+module.exports = router;

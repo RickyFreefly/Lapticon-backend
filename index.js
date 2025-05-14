@@ -31,3 +31,6 @@ app.use('/api/ciudades', ciudadRoutes);
 
 const encomiendasRoutes = require('./routes/encomiendasRoutes');
 app.use('/api/encomiendas', encomiendasRoutes);
+
+const chatbotRoutes = require('./routes/chatbotRoutes');
+app.use('/api/chatbot', chatbotRoutes);

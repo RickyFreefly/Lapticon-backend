@@ -17,6 +17,28 @@ router.get('/', verificarToken, async (req, res) => {
   }
 });
 
+// 🔍 Obtener el viaje disponible del usuario
+router.get('/disponible', verificarToken, async (req, res) => {
+  try {
+    const viaje = await Viaje.findOne({
+      uid: req.usuario.uid,
+      estado: 'disponible'
+    });
+
+    if (!viaje) {
+      return res.status(404).json({ mensaje: 'No hay viajes disponibles' });
+    }
+
+    res.json(viaje);
+  } catch (error) {
+    console.error('❌ Error al buscar viaje disponible:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+module.exports = router;
+
+
 // ✅ Buscar viajeros por ciudad de origen (excluyendo al usuario actual)
 router.get('/buscar', verificarToken, async (req, res) => {
   try {

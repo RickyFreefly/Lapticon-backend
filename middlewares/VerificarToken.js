@@ -11,7 +11,7 @@ async function verificarToken(req, res, next) {
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    req.usuario = decodedToken;
+    req.user = decodedToken; // ✅ ahora tu ruta funcionará como espera
     next();
   } catch (error) {
     console.error('❌ Error al verificar token:', error);

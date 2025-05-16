@@ -3,6 +3,7 @@ const router = express.Router();
 const Encomienda = require('../models/Encomiendas');
 const verificarToken = require('../middlewares/VerificarToken');
 const User = require('../models/User');
+const axios = require('axios');
 
 // 🔁 Función para actualizar encomiendas vencidas
 async function actualizarEncomiendasVencidas() {
@@ -88,6 +89,23 @@ router.get('/disponibles', verificarToken, async (req, res) => {
     });
 
     res.json(respuesta);
+  } catch (error) {
+    console.error('❌ Error al obtener encomiendas disponibles:', error);
+    res.status(500).json({ error: 'Error al obtener encomiendas' });
+  }
+});
+
+router.get('/disponibles2', verificarToken, async (req, res) => {
+  const { ciudadOrigen, ciudadDestino } = req.query;
+  const filtro = {
+    estado: 'disponible',
+    ...(ciudadOrigen && { ciudadOrigen }),
+    ...(ciudadDestino && { ciudadDestino }),
+  };
+
+  try {
+    const encomiendas = await Encomienda.find(filtro);
+    res.json(encomiendas);
   } catch (error) {
     console.error('❌ Error al obtener encomiendas disponibles:', error);
     res.status(500).json({ error: 'Error al obtener encomiendas' });
@@ -213,6 +231,51 @@ router.post('/actualizar-vencidas', async (req, res) => {
   } catch (error) {
     console.error('❌ Error al actualizar vencidas:', error);
     res.status(500).json({ error: 'Error en la tarea programada' });
+  }
+});
+
+// ✅ Ruta para consultar si un emparejamiento es ideal
+router.post('/evaluar-emparejamiento', verificarToken, async (req, res) => {
+  const {
+    origen_match,
+    destino_match,
+    dias_diferencia,
+    valor_encomienda,
+    reputacion_viajero,
+  //  peso_encomienda
+  } = req.body;
+
+  try {
+    const respuesta = await axios.post('http://localhost:8000/predict', {
+      origen_match,
+      destino_match,
+      dias_diferencia,
+      valor_encomienda,
+      reputacion_viajero,
+    //  peso_encomienda
+    });
+
+    res.json({ match: respuesta.data.match });
+  } catch (error) {
+    console.error('❌ Error al consultar motor IA:', error.message);
+    res.status(500).json({ error: 'Error al consultar motor de emparejamiento' });
+  }
+});
+
+router.get('/disponibles', verificarToken, async (req, res) => {
+  const { ciudadOrigen, ciudadDestino } = req.query;
+  const filtro = {
+    estado: 'disponible',
+    ...(ciudadOrigen && { ciudadOrigen }),
+    ...(ciudadDestino && { ciudadDestino }),
+  };
+
+  try {
+    const encomiendas = await Encomienda.find(filtro);
+    res.json(encomiendas);
+  } catch (error) {
+    console.error('❌ Error al obtener encomiendas disponibles:', error);
+    res.status(500).json({ error: 'Error al obtener encomiendas' });
   }
 });
 

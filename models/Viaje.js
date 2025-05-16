@@ -3,11 +3,11 @@ const mongoose = require('mongoose');
 
 const viajeSchema = new mongoose.Schema({
   uid: { type: String, required: true },
-  paisOrigen: String,
-  ciudadOrigen: String,
-  paisDestino: String,
-  ciudadDestino: String,
-  fechaViaje: Date,
+  numeroVuelo: { type: String, required: true },
+  ciudadOrigen: { type: String, required: true },
+  ciudadDestino: { type: String, required: true },
+  fechaViaje: { type: Date, required: true },
+  estado: { type: String, default: 'disponible' },
   createdAt: { type: Date, default: Date.now }
 });
 

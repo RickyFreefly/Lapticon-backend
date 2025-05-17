@@ -2,7 +2,7 @@ const Viaje = require('../models/Viaje');
 
 const crearViaje = async (req, res) => {
   try {
-    const uid = req.usuario.uid;
+    const uid = req.user.uid;
 
     // 1. Verifica si el usuario ya tiene un viaje disponible
     const viajeExistente = await Viaje.findOne({ uid, estado: 'disponible' });

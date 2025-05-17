@@ -10,7 +10,7 @@ router.post('/', verificarToken, crearViaje);
 // ✅ Listar todos los viajes del usuario autenticado
 router.get('/', verificarToken, async (req, res) => {
   try {
-    const viajes = await Viaje.find({ uid: req.usuario.uid }).sort({ fechaViaje: 1 });
+    const viajes = await Viaje.find({ uid: req.user.uid }).sort({ fechaViaje: 1 });
     res.json(viajes);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener viajes' });
@@ -21,7 +21,7 @@ router.get('/', verificarToken, async (req, res) => {
 router.get('/disponible', verificarToken, async (req, res) => {
   try {
     const viaje = await Viaje.findOne({
-      uid: req.usuario.uid,
+      uid: req.user.uid,
       estado: 'disponible'
     });
 
@@ -50,7 +50,7 @@ router.get('/buscar', verificarToken, async (req, res) => {
 
     const viajes = await Viaje.find({
       ciudadOrigen: ciudad,
-      uid: { $ne: req.usuario.uid },
+      uid: { $ne: req.user.uid },
       estado: 'disponible' // solo mostrar viajes disponibles
     }).sort({ fechaViaje: 1 });
 
@@ -72,7 +72,7 @@ router.patch('/:id/estado', verificarToken, async (req, res) => {
     }
 
     const viaje = await Viaje.findOneAndUpdate(
-      { _id: id, uid: req.usuario.uid },
+      { _id: id, uid: req.user.uid },
       { estado },
       { new: true }
     );

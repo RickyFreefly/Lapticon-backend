@@ -4,6 +4,7 @@ const Encomienda = require('../models/Encomiendas');
 const verificarToken = require('../middlewares/VerificarToken');
 const User = require('../models/User');
 const axios = require('axios');
+const config = require('../config');
 
 // 🔁 Función para actualizar encomiendas vencidas
 async function actualizarEncomiendasVencidas() {
@@ -34,7 +35,7 @@ router.post('/', verificarToken, async (req, res) => {
     fechaVencimiento.setMonth(fechaCreacion.getMonth() + 1);
 
     const nuevaEncomienda = new Encomienda({
-      uid: req.usuario.uid,
+      uid: req.user.uid,
       ciudadOrigen,
       ciudadDestino,
       observaciones,
@@ -242,22 +243,20 @@ router.post('/evaluar-emparejamiento', verificarToken, async (req, res) => {
     dias_diferencia,
     valor_encomienda,
     reputacion_viajero,
-  //  peso_encomienda
   } = req.body;
 
   try {
-    const respuesta = await axios.post('http://localhost:8000/predict', {
+    const respuesta = await axios.post(`${config.matchingApiUrl}/predict`, {
       origen_match,
       destino_match,
       dias_diferencia,
       valor_encomienda,
       reputacion_viajero,
-    //  peso_encomienda
     });
 
     res.json({ match: respuesta.data.match });
   } catch (error) {
-    console.error('❌ Error al consultar motor IA:', error.message);
+    console.error('❌ Error al consultar motor IA:', error.response?.data || error.message);
     res.status(500).json({ error: 'Error al consultar motor de emparejamiento' });
   }
 });

@@ -2,7 +2,7 @@ const User = require('../models/User');
 
 const registerUser = async (req, res) => {
   try {
-    const { uid, email } = req.usuario; // 👈 clave correcta
+    const { uid, email } = req.user; // 👈 clave correcta
 
     const { nombre, apellido, telefono, fechaNacimiento, nacionalidad, correo } = req.body;
 

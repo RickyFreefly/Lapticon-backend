@@ -6,7 +6,7 @@ const manejarChat = async (req, res) => {
   const { mensajeUsuario } = req.body;
 
   // ✅ Usa el uid real si está autenticado, o un valor de prueba en local
-  const uid = req.usuario?.uid || 'usuario-test';
+  const uid = req.user?.uid || 'usuario-test';
 
   if (!mensajeUsuario || mensajeUsuario.trim() === '') {
     return res.status(400).json({ error: 'Mensaje vacío' });

@@ -35,7 +35,7 @@ router.post('/', verificarToken, async (req, res) => {
     fechaVencimiento.setMonth(fechaCreacion.getMonth() + 1);
 
     const nuevaEncomienda = new Encomienda({
-      uid: req.usuario.uid,
+      uid: req.user.uid,
       ciudadOrigen,
       ciudadDestino,
       observaciones,

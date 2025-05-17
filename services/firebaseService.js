@@ -23,7 +23,7 @@ const verificarToken = async (req, res, next) => {
 
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    req.usuario = decoded; // Acceso al UID, email, etc.
+    req.user = decoded; // Acceso al UID, email, etc.
     next();
   } catch (error) {
     console.error('❌ Error al verificar el token:', error);

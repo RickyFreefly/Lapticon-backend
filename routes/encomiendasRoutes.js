@@ -4,6 +4,7 @@ const Encomienda = require('../models/Encomiendas');
 const verificarToken = require('../middlewares/VerificarToken');
 const User = require('../models/User');
 const axios = require('axios');
+const config = require('../config');
 
 // 🔁 Función para actualizar encomiendas vencidas
 async function actualizarEncomiendasVencidas() {
@@ -34,7 +35,7 @@ router.post('/', verificarToken, async (req, res) => {
     fechaVencimiento.setMonth(fechaCreacion.getMonth() + 1);
 
     const nuevaEncomienda = new Encomienda({
-      uid: req.usuario.uid,
+      uid: req.user.uid,
       ciudadOrigen,
       ciudadDestino,
       observaciones,
@@ -115,7 +116,7 @@ router.get('/disponibles2', verificarToken, async (req, res) => {
 // ✅ Ruta para que un viajero tome una encomienda
 router.put('/tomar/:id', verificarToken, async (req, res) => {
   const encomiendaId = req.params.id;
-  const uidViajero = req.usuario.uid;
+  const uidViajero = req.user.uid;
 
   try {
     const encomienda = await Encomienda.findById(encomiendaId);
@@ -143,7 +144,7 @@ router.put('/tomar/:id', verificarToken, async (req, res) => {
 // ✅ Ruta combinada: devuelve encomiendas disponibles y tomadas por el viajero
 router.get('/buscar', verificarToken, async (req, res) => {
   const { origen, destino } = req.query;
-  const uidViajero = req.usuario.uid;
+  const uidViajero = req.user.uid;
 
   if (!origen || !destino) {
     return res.status(400).json({ error: 'Origen y destino son requeridos' });
@@ -213,7 +214,7 @@ router.get('/', verificarToken, async (req, res) => {
   try {
     await actualizarEncomiendasVencidas();
 
-    const uid = req.usuario.uid;
+    const uid = req.user.uid;
 
     const encomiendas = await Encomienda.find({ uid }).sort({ fechaCreacion: -1 });
 
@@ -242,22 +243,20 @@ router.post('/evaluar-emparejamiento', verificarToken, async (req, res) => {
     dias_diferencia,
     valor_encomienda,
     reputacion_viajero,
-  //  peso_encomienda
   } = req.body;
 
   try {
-    const respuesta = await axios.post('http://localhost:8000/predict', {
+    const respuesta = await axios.post(`${config.matchingApiUrl}/predict`, {
       origen_match,
       destino_match,
       dias_diferencia,
       valor_encomienda,
       reputacion_viajero,
-    //  peso_encomienda
     });
 
     res.json({ match: respuesta.data.match });
   } catch (error) {
-    console.error('❌ Error al consultar motor IA:', error.message);
+    console.error('❌ Error al consultar motor IA:', error.response?.data || error.message);
     res.status(500).json({ error: 'Error al consultar motor de emparejamiento' });
   }
 });
@@ -278,5 +277,51 @@ router.get('/disponibles', verificarToken, async (req, res) => {
     res.status(500).json({ error: 'Error al obtener encomiendas' });
   }
 });
+
+router.get('/mis-encomiendas', verificarToken, async (req, res) => {
+  try {
+    await actualizarEncomiendasVencidas();
+
+    const uid = req.user.uid;
+
+    const disponibles = await Encomienda.find({ uid, estado: 'disponible' });
+
+    res.json({ disponibles });
+  } catch (error) {
+    console.error('❌ Error al obtener mis encomiendas disponibles:', error);
+    res.status(500).json({ error: 'Error al obtener mis encomiendas disponibles' });
+  }
+});
+
+// ✅ Ruta para emparejar viajes con IA (remitente)
+router.post('/emparejar-viajes', verificarToken, async (req, res) => {
+  const { ciudadOrigen, ciudadDestino, fechaEncomienda, valorEncomienda } = req.body;
+
+  try {
+    const viajes = await require('../models/Viaje').find({
+      ciudadOrigen,
+      ciudadDestino,
+      estado: 'disponible',
+      uid: { $ne: req.user.uid } // excluye los del remitente
+    });
+
+    if (!viajes.length) {
+      return res.status(200).json([]);
+    }
+
+    const { obtenerViajesSugeridos } = require('../services/iaRemitenteService');
+
+    const sugerencias = await obtenerViajesSugeridos(
+      { ciudadOrigen, ciudadDestino, fechaEncomienda, valorEncomienda },
+      viajes
+    );
+
+    res.json(sugerencias);
+  } catch (error) {
+    console.error('❌ Error al emparejar viajes:', error);
+    res.status(500).json({ error: 'Error interno al emparejar viajes' });
+  }
+});
+
 
 module.exports = router;

@@ -323,5 +323,26 @@ router.post('/emparejar-viajes', verificarToken, async (req, res) => {
   }
 });
 
+router.put('/:id/estado', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+
+    const encomienda = await Encomienda.findByIdAndUpdate(
+      id,
+      { estado },
+      { new: true }
+    );
+
+    if (!encomienda) {
+      return res.status(404).json({ error: 'Encomienda no encontrada' });
+    }
+
+    res.json({ mensaje: 'Estado actualizado', encomienda });
+  } catch (error) {
+    console.error('❌ Error al actualizar estado de encomienda:', error);
+    res.status(500).json({ error: 'Error al actualizar estado' });
+  }
+});
 
 module.exports = router;

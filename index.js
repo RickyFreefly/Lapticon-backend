@@ -12,6 +12,7 @@ const availableRoutes = require('./routes/availableRoutes');
 const ciudadRoutes = require('./routes/ciudadRoutes');
 const encomiendasRoutes = require('./routes/encomiendasRoutes');
 const chatbotRoutes = require('./routes/chatbotRoutes');
+const ratingRoutes = require('./routes/ratingRoutes');
 
 const app = express();
 app.use(cors());
@@ -30,6 +31,7 @@ app.use('/api/viajes', availableRoutes);
 app.use('/api/ciudades', ciudadRoutes);
 app.use('/api/encomiendas', encomiendasRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/ratings', ratingRoutes);
 
 // Servidor
 app.listen(config.port, () => {

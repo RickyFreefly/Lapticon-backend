@@ -5,6 +5,7 @@ const verificarToken = require('../middlewares/VerificarToken');
 const User = require('../models/User');
 const axios = require('axios');
 const config = require('../config');
+const { cerrarChatSiEntregaConfirmada } = require('../services/chatService');
 
 // 🔁 Función para actualizar encomiendas vencidas
 async function actualizarEncomiendasVencidas() {
@@ -323,5 +324,31 @@ router.post('/emparejar-viajes', verificarToken, async (req, res) => {
   }
 });
 
+router.put('/:id/estado', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+
+    const encomienda = await Encomienda.findByIdAndUpdate(
+      id,
+      { estado },
+      { new: true }
+    );
+
+    if (!encomienda) {
+      return res.status(404).json({ error: 'Encomienda no encontrada' });
+    }
+
+    // ✅ Llamar el servicio si la encomienda fue marcada como "recibida"
+    if (estado === 'recibida') {
+      await cerrarChatSiEntregaConfirmada(id);
+    }
+
+    res.json({ mensaje: 'Estado actualizado', encomienda });
+  } catch (error) {
+    console.error('❌ Error al actualizar estado de encomienda:', error);
+    res.status(500).json({ error: 'Error al actualizar estado' });
+  }
+});
 
 module.exports = router;

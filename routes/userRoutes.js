@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser } = require('../controllers/userController');
+const { registerUser, updateUser } = require('../controllers/userController');
 const verificarToken = require('../middlewares/VerificarToken');
 
-// Ruta protegida: requiere idToken válido en el header Authorization
+// Registrar nuevo usuario (protegido)
 router.post('/register', verificarToken, registerUser);
+
+// Actualizar usuario (protegido)
+router.put('/:uid', verificarToken, updateUser);
 
 module.exports = router;

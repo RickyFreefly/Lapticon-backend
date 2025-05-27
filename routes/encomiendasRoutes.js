@@ -5,6 +5,7 @@ const verificarToken = require('../middlewares/VerificarToken');
 const User = require('../models/User');
 const axios = require('axios');
 const config = require('../config');
+const { cerrarChatSiEntregaConfirmada } = require('../services/chatService');
 
 // 🔁 Función para actualizar encomiendas vencidas
 async function actualizarEncomiendasVencidas() {
@@ -336,6 +337,11 @@ router.put('/:id/estado', verificarToken, async (req, res) => {
 
     if (!encomienda) {
       return res.status(404).json({ error: 'Encomienda no encontrada' });
+    }
+
+    // ✅ Llamar el servicio si la encomienda fue marcada como "recibida"
+    if (estado === 'recibida') {
+      await cerrarChatSiEntregaConfirmada(id);
     }
 
     res.json({ mensaje: 'Estado actualizado', encomienda });

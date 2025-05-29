@@ -59,8 +59,28 @@ const updateUser = async (req, res) => {
   }
 };
 
+const getUserProfile = async (req, res) => {
+  try {
+    const { uid } = req.user;
+    console.log('🔍 UID desde token:', uid); // 👈 Agrega esto
+
+    const user = await User.findOne({ uid });
+
+    if (!user) {
+      console.log('⚠️ No se encontró el usuario en la base de datos con ese uid');
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('❌ Error al obtener perfil:', error);
+    res.status(500).json({ error: 'Error al obtener perfil del usuario' });
+  }
+};
+
 // ✅ Exportar ambos controladores
 module.exports = {
   registerUser,
   updateUser,
+  getUserProfile, // ✅ nuevo
 };
